@@ -1,0 +1,33 @@
+// Step 1: Packet received from NIC
+tracepoint:net:netif_receive_skb
+{
+  printf("NETIF_RX: skb=0x%lx len=%d\n", args->skbaddr, args->len);
+}
+
+// Step 2: IP layer begins processing
+kprobe:ip_rcv
+{
+  printf("IP_RCV: skb=0x%lx data=0x%lx\n", arg1, ((struct sk_buff *)arg1)->data);
+}
+
+// Step 3: UDP handler begins
+kprobe:__udp4_lib_rcv
+{
+  printf("UDP4_LIB_RCV: skb=0x%lx\n", arg1);
+}
+
+// Step 4: UDP socket table lookup
+kprobe:__udp4_lib_lookup
+{
+  $sport = ((arg4 >> 8) & 0xff) | ((arg4 & 0xff) << 8);
+  $dport = ((arg5 >> 8) & 0xff) | ((arg5 & 0xff) << 8);
+
+  printf("UDP_LOOKUP: saddr=0x%x daddr=0x%x sport=%d dport=%d\n",
+         arg2, arg3, $sport, $dport);
+}
+
+// Step 5: Packet is queued to socket
+kprobe:udp_queue_rcv_skb
+{
+  printf("UDP_QUEUED: sock=0x%lx skb=0x%lx\n", arg0, arg1);
+}
